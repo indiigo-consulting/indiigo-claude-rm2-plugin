@@ -1,0 +1,34 @@
+{
+  "name": "indiigo-rm2",
+  "displayName": "indiigo reMarkable",
+  "version": "0.1.0",
+  "description": "indiigo reMarkable: list, view and upload documents on a reMarkable 2 over its USB cable, with optional Wi-Fi",
+  "author": {
+    "name": "indiigo",
+    "email": "roy@indiigo.com"
+  },
+  "repository": "https://github.com/indiigo-consulting/indiigo-claude-rm2-plugin",
+  "license": "MIT",
+  "userConfig": {
+    "ssh_host": {
+      "type": "string",
+      "title": "SSH host for Wi-Fi (optional)",
+      "description": "Leave empty to connect over the USB cable only. Set to an SSH host with key login to the tablet as root (for example rm2 from ~/.ssh/config) to fall back to Wi-Fi when the cable is not connected.",
+      "required": false,
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "remarkable": {
+      "command": "/usr/bin/osascript",
+      "args": [
+        "-l",
+        "JavaScript",
+        "${CLAUDE_PLUGIN_ROOT}/server.js"
+      ],
+      "env": {
+        "RM2_SSH_HOST": "${user_config.ssh_host}"
+      }
+    }
+  }
+}

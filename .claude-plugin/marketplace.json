@@ -1,20 +1,20 @@
 {
-  "name": "indiigo-rm2",
-  "description": "indiigo Claude Code plugins for reMarkable 2 tablets",
+  "name": "indiigo-remarkable",
+  "description": "indiigo Claude plugins for reMarkable 2 tablets",
   "owner": {
     "name": "indiigo",
     "email": "roy@indiigo.com"
   },
   "plugins": [
     {
-      "name": "rm2",
-      "source": "./plugins/rm2",
-      "description": "List, view and upload documents on a reMarkable 2 over its USB cable, with optional Wi-Fi"
+      "name": "indiigo-rm2",
+      "source": "./plugins/indiigo-rm2",
+      "description": "indiigo reMarkable: list, view and upload documents on a reMarkable 2 over its USB cable, with optional Wi-Fi"
     },
     {
-      "name": "rm2-ssh",
-      "source": "./plugins/rm2-ssh",
-      "description": "Extra reMarkable 2 skills that need SSH access to the tablet, such as deleting documents"
+      "name": "indiigo-rm2-ssh",
+      "source": "./plugins/indiigo-rm2-ssh",
+      "description": "indiigo reMarkable SSH: extra reMarkable 2 actions that need SSH access, such as deleting documents"
     }
   ]
 }

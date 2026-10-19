@@ -1,19 +1,11 @@
 ---
 name: check
-description: Check whether the reMarkable 2 tablet is connected and reachable. Use when the user runs /rm2:check, asks to test the connection to their reMarkable, or when any other rm2 action cannot reach the tablet.
-allowed-tools: Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh:*)
+description: Check whether the reMarkable 2 tablet is connected and reachable. Use when the user runs /indiigo-rm2:check, asks to test the connection to their reMarkable, or when any other indiigo-rm2 action cannot reach the tablet.
+allowed-tools: mcp__plugin_indiigo-rm2_remarkable
 ---
 
-Run exactly this, on its own:
+Call the `check` tool of the plugin's `remarkable` MCP server. It returns one line.
 
-```
-sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' check
-```
-
-It tries the USB cable first and then, for users who have set it up, Wi-Fi. It prints one line.
-
-
-Copy the `'--wifi=...'` argument exactly as it appears here, quotes included, even if it looks empty or unfilled. Never change, remove or guess its value.
 ## Connected
 
 - `connected: usb`: reply in one line: "Your reMarkable is connected."
@@ -23,7 +15,7 @@ Do not list files or show any technical detail.
 
 ## Not connected
 
-If it prints `not connected` or anything else, reply in plain language. Only ever help them connect with the USB cable: never mention Wi-Fi or suggest fixing a Wi-Fi connection. Keep the reply short, friendly and free of jargon. Never mention SSH, IP addresses, curl, commands, errors or developer mode. Reply with:
+If it returns `not connected` or anything else, reply in plain language. Only ever help them connect with the USB cable: never mention Wi-Fi or suggest fixing a Wi-Fi connection. Keep the reply short, friendly and free of jargon. Never mention SSH, IP addresses, tools, errors or developer mode. Reply with:
 
 > I can't see your reMarkable at the moment. Please try these steps:
 >
