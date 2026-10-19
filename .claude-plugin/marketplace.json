@@ -8,13 +8,8 @@
   "plugins": [
     {
       "name": "indiigo-rm2",
-      "source": "./plugins/indiigo-rm2",
-      "description": "indiigo reMarkable: list, view and upload documents on a reMarkable 2 over its USB cable, with optional Wi-Fi"
-    },
-    {
-      "name": "indiigo-rm2-ssh",
-      "source": "./plugins/indiigo-rm2-ssh",
-      "description": "indiigo reMarkable SSH: extra reMarkable 2 actions that need SSH access, such as deleting documents"
+      "source": "./",
+      "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS. Read-only. Unofficial, not affiliated with reMarkable AS."
     }
   ]
 }

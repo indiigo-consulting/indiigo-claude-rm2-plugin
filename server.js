@@ -4,8 +4,8 @@
 //
 // The tablet's web interface is at http://10.11.99.1 over the USB cable. When
 // the cable is not connected and RM2_SSH_HOST is set, the same requests run on
-// the tablet over SSH (wget for reads, an SSH tunnel for uploads), so every
-// tool behaves the same over USB and Wi-Fi.
+// the tablet over SSH with wget, so every tool behaves the same over USB and
+// Wi-Fi. All tools are read-only.
 //
 // Speaks MCP over stdio: one JSON-RPC message per line.
 
@@ -21,6 +21,8 @@ const env = $.NSProcessInfo.processInfo.environment;
 const sshHost = plainHost(ObjC.unwrap(env.objectForKey('RM2_SSH_HOST')) || '');
 const cacheDir = (ObjC.unwrap(env.objectForKey('TMPDIR')) || '/tmp/').replace(/\/?$/, '/') + 'indiigo-rm2';
 const MAX_PAGES = 5;
+const NOT_CONNECTED =
+  'not connected: the reMarkable did not answer. Connect it with its USB cable, wake it, and check Settings > Storage > USB web interface is on';
 
 // ---------------------------------------------------------------- utilities
 
@@ -62,7 +64,7 @@ function connect() {
   if (sshHost && tryShell(SSH + quote(sshHost) + ' ' + quote('wget -q -T 5 -O /dev/null ' + BASE + '/documents/')).ok)
     return (route = 'wifi');
   route = null;
-  throw new Error('not connected');
+  throw new Error(NOT_CONNECTED);
 }
 
 function viaRoute(usbCommand, wifiCommand) {
@@ -72,7 +74,7 @@ function viaRoute(usbCommand, wifiCommand) {
   connect(); // the route may have changed, e.g. cable unplugged
   r = tryShell(route === 'usb' ? usbCommand : wifiCommand);
   if (r.ok) return r.out;
-  throw new Error('not connected');
+  throw new Error(NOT_CONNECTED);
 }
 
 function get(path, secs) {
@@ -91,26 +93,6 @@ function save(path, file, secs) {
   );
 }
 
-function uploadFile(folderId, file) {
-  const type = /\.epub$/i.test(file) ? 'application/epub+zip' : 'application/pdf';
-  const form = quote('file=@"' + file + '";type=' + type);
-  const listPath = safePath('documents/' + folderId);
-  // The tablet uploads into the folder most recently listed, so list it first.
-  const usb = 'curl -sf --connect-timeout 2 --max-time 10 -o /dev/null ' + BASE + '/' + listPath +
-    ' && curl -sf --max-time 120 -o /dev/null -F ' + form + ' ' + BASE + '/upload';
-  const port = 20000 + Math.floor(Math.random() * 10000);
-  const local = 'http://127.0.0.1:' + port;
-  const wifi = SSH + '-f -o ExitOnForwardFailure=yes -L ' + port + ':10.11.99.1:80 ' + quote(sshHost) + ' sleep 10' +
-    ' && curl -sf --max-time 10 -o /dev/null ' + local + '/' + listPath +
-    ' && curl -sf --max-time 120 -o /dev/null -F ' + form + ' ' + local + '/upload';
-  // Never retry an upload: a transfer that failed late may still have added
-  // the document, and a retry would add a second copy.
-  connect();
-  if (!tryShell(route === 'usb' ? usb : wifi).ok) {
-    route = null;
-    throw new Error('upload failed');
-  }
-}
 
 // ---------------------------------------------------------------- documents
 
@@ -220,30 +202,13 @@ function renderPage(doc, pageNumber, width) {
   return ObjC.unwrap(png.base64EncodedStringWithOptions(0));
 }
 
-// ---------------------------------------------------------------- uploads
-
-function stagedCopy(name, bytes) {
-  // Write content to a temporary file with the name the tablet should show.
-  const dir = sh('mktemp -d -t indiigo-rm2-upload').trim();
-  const file = dir + '/' + name;
-  const data = $.NSData.alloc.initWithBase64EncodedStringOptions(bytes, $.NSDataBase64DecodingIgnoreUnknownCharacters);
-  if (!data || Number(data.length) === 0) throw new Error('content is not valid base64');
-  if (!data.writeToFileAtomically(file, true)) throw new Error('could not stage the file');
-  return { file, dir };
-}
-
-function checkName(name) {
-  if (!/\.(pdf|epub)$/i.test(name)) throw new Error('only PDF and EPUB files can be uploaded');
-  if (/["\/;,]/.test(name)) throw new Error('the file name must not contain " / ; or ,');
-  return name;
-}
-
 // ---------------------------------------------------------------- tools
 
 const TOOLS = [
   {
     name: 'check',
-    description: 'Check whether the reMarkable 2 tablet can be reached, over its USB cable or (if set up) Wi-Fi.',
+    title: 'Check reMarkable connection',
+    description: 'Checks whether the reMarkable 2 tablet can be reached, over its USB cable or (if set up) Wi-Fi. Returns "connected: usb", "connected: wifi" or "not connected".',
     inputSchema: { type: 'object', properties: {} },
     run() {
       try {
@@ -255,8 +220,9 @@ const TOOLS = [
   },
   {
     name: 'list',
+    title: 'List reMarkable documents',
     description:
-      'List the folders and documents on the reMarkable 2, at the top level or inside a folder found by name (case-insensitive, searched in all folders).',
+      'Lists the folders and documents on the reMarkable 2, at the top level or inside a folder found by name (case-insensitive, searched in all folders). Returns each item\'s name, kind, folder, last-changed time and, for documents, the page last open.',
     inputSchema: {
       type: 'object',
       properties: { folder: { type: 'string', description: 'Folder name; omit for the top level' } },
@@ -274,8 +240,9 @@ const TOOLS = [
   },
   {
     name: 'view_pages',
+    title: 'View reMarkable pages',
     description:
-      'Show pages of a document on the reMarkable 2 as images, handwriting included. The document is found by name (case-insensitive, partial match allowed, searched in all folders). Up to ' +
+      'Returns pages of a document on the reMarkable 2 as PNG images, handwriting included. The document is found by name (case-insensitive, partial match allowed, searched in all folders). Up to ' +
       MAX_PAGES +
       ' pages per call.',
     inputSchema: {
@@ -291,6 +258,7 @@ const TOOLS = [
       required: ['document'],
     },
     run(args) {
+      if (!args.document || !String(args.document).trim()) throw new Error('document is required: give the name of a document, e.g. General');
       const found = findDocument(String(args.document), args.folder && String(args.folder));
       const item = found.item;
       const doc = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(fetchPdf(item)));
@@ -302,60 +270,6 @@ const TOOLS = [
         content.push({ type: 'image', data: renderPage(doc, p, 1000), mimeType: 'image/png' });
       }
       return content;
-    },
-  },
-  {
-    name: 'upload',
-    description:
-      'Upload a PDF or EPUB to the reMarkable 2, at the top level or into a folder found by name. The document is named after the file, without the extension. Give either file_path (a file on this Mac) or content_base64 with file_name. The tablet cannot replace documents: if one with the same name is already in the folder, this fails unless allow_duplicate is true.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        file_path: { type: 'string', description: 'Absolute path to the file on this Mac' },
-        content_base64: { type: 'string', description: 'The file content, base64-encoded, when no Mac path is available' },
-        file_name: { type: 'string', description: 'Name for the file, e.g. Todo 2026-10-20.pdf; required with content_base64' },
-        folder: { type: 'string', description: 'Folder name; omit for the top level' },
-        allow_duplicate: { type: 'boolean', description: 'Upload even if a document with the same name exists' },
-      },
-    },
-    run(args) {
-      let source;
-      let staged = null;
-      if (args.file_path && tryShell('test -f ' + quote(args.file_path)).ok) {
-        const base = String(args.file_path).split('/').pop();
-        const name = checkName(args.file_name ? String(args.file_name) : base);
-        if (name === base) source = String(args.file_path);
-        else {
-          staged = { dir: sh('mktemp -d -t indiigo-rm2-upload').trim() };
-          source = staged.dir + '/' + name;
-          sh('cp ' + quote(args.file_path) + ' ' + quote(source));
-        }
-      } else if (args.content_base64) {
-        if (!args.file_name) throw new Error('file_name is required with content_base64');
-        staged = stagedCopy(checkName(String(args.file_name)), String(args.content_base64));
-        source = staged.file;
-      } else if (args.file_path) {
-        throw new Error('file not found on this Mac: ' + args.file_path);
-      } else {
-        throw new Error('give file_path or content_base64');
-      }
-      try {
-        let folderId = '';
-        let where = 'the top level';
-        if (args.folder) {
-          const f = findFolder(String(args.folder));
-          folderId = f.item.ID;
-          where = 'the ' + f.item.VisibleName + ' folder';
-        }
-        const title = source.split('/').pop().replace(/\.(pdf|epub)$/i, '');
-        const existing = listFolder(folderId).filter((i) => i.Type === 'DocumentType' && i.VisibleName === title);
-        if (existing.length && !args.allow_duplicate)
-          throw new Error('a document called "' + title + '" is already in ' + where + '; uploading again would add a second copy');
-        uploadFile(folderId, source);
-        return text('uploaded "' + title + '" to ' + where);
-      } finally {
-        if (staged) tryShell('rm -rf ' + quote(staged.dir));
-      }
     },
   },
 ];
@@ -392,7 +306,7 @@ function handle(message) {
       result: {
         protocolVersion: (params && params.protocolVersion) || '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'indiigo reMarkable', version: '0.1.0' },
+        serverInfo: { name: 'indiigo reMarkable', version: '0.2.0' },
       },
     });
   } else if (method === 'ping') {
@@ -401,7 +315,15 @@ function handle(message) {
     send({
       jsonrpc: '2.0',
       id,
-      result: { tools: TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })) },
+      result: {
+        tools: TOOLS.map((t) => ({
+          name: t.name,
+          title: t.title,
+          description: t.description,
+          inputSchema: t.inputSchema,
+          annotations: { title: t.title, readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        })),
+      },
     });
   } else if (method === 'tools/call') {
     const tool = TOOLS.find((t) => t.name === params.name);

@@ -1,43 +1,46 @@
-# indiigo-claude-rm2-plugin
+# indiigo reMarkable
 
-Claude plugins for reMarkable 2 tablets, for Claude Code and Claude Cowork on macOS. The repo is a marketplace with two plugins:
+A Claude plugin that lets Claude look at your reMarkable 2: check the tablet is connected, list your folders and notebooks, and view pages, so Claude can read your handwriting, describe your sketches and answer questions about your notes. It works in Claude Code and Claude Cowork on macOS.
 
-| Plugin | Shown as | Skills | Needs |
-|---|---|---|---|
-| `indiigo-rm2` | indiigo reMarkable | `/indiigo-rm2:check`, `list`, `view`, `upload` | The USB cable. Wi-Fi optional (see below) |
-| `indiigo-rm2-ssh` | indiigo reMarkable SSH | `/indiigo-rm2-ssh:delete` | SSH key login to the tablet, over the cable or Wi-Fi |
+The plugin is read-only: it never changes, uploads or deletes anything on the tablet.
 
-Install only `indiigo-rm2` unless you have SSH access to the tablet; the SSH skills then never appear.
+This is an unofficial plugin by indiigo. It is not made, endorsed or supported by reMarkable AS.
+
+## Requirements
+
+- A Mac. The plugin uses only software built into macOS, so it does not work on Windows or Linux.
+- A reMarkable 2 connected to the Mac with its USB cable.
+- On the tablet: Settings > Storage > turn on "USB web interface". This is a one-time step: the setting survives unplugging and restarts.
+
+Nothing else is needed: no account, no SSH keys, no developer mode and no extra software.
+
+## Skills
+
+- `/indiigo-rm2:check`: check the tablet is connected, with simple steps to fix it if not.
+- `/indiigo-rm2:list [folder]`: list folders and documents on the tablet.
+- `/indiigo-rm2:view <notebook> [pages]`: let Claude look at pages, for example `/indiigo-rm2:view General last`. Defaults to the page the tablet was last open on.
+
+Claude also uses these on its own when you ask things like "what did I sketch in General?".
 
 ## Install
 
 ```
 /plugin marketplace add indiigo-consulting/indiigo-claude-rm2-plugin
 /plugin install indiigo-rm2@indiigo-remarkable
-/plugin install indiigo-rm2-ssh@indiigo-remarkable
 ```
 
-## indiigo-rm2
+## What the plugin runs and where data goes
 
-Requirements:
+The plugin includes one MCP server, `server.js`, written in JavaScript for Automation and started with macOS's built-in `/usr/bin/osascript`. It runs on your Mac and:
 
-- A Mac, and a reMarkable 2 connected to it with its USB cable.
-- On the tablet: Settings > Storage > turn on "USB web interface". This is a one-time step: the setting survives unplugging and restarts.
+- Sends HTTP requests only to the tablet's own web interface at `http://10.11.99.1` (the address the tablet gives itself on the USB cable), using `curl`. It reads folder listings (`/documents/`) and downloads documents as PDFs (`/download/<id>/pdf`). It does not use any other address, and nothing is sent to indiigo, reMarkable's cloud or anyone else.
+- Draws the requested pages as PNG images with macOS's built-in PDF support and returns them to Claude in the conversation.
+- Keeps the latest downloaded PDF of each document in a temporary folder on your Mac (`$TMPDIR/indiigo-rm2`) so it can reuse it while the document is unchanged.
+- Runs only `curl`, `ssh` (see below), `mkdir`, `mv`, `rm`, `head` and `test` from macOS, on those cached files and nothing else.
 
-Nothing else is needed: no SSH keys, no developer mode and no extra software. The plugin's MCP server is a JavaScript for Automation script run by macOS's built-in `osascript`. It talks to the tablet's web interface at `http://10.11.99.1` and draws pages with macOS's own PDF support.
+## Optional: Wi-Fi
 
-Skills:
-
-- `/indiigo-rm2:check`: check the tablet is connected, with simple steps to fix it if not.
-- `/indiigo-rm2:list [folder]`: list folders and documents on the tablet.
-- `/indiigo-rm2:view <notebook> [pages]`: let Claude look at pages, e.g. `/indiigo-rm2:view General last`. Defaults to the page the tablet was last open on.
-- `/indiigo-rm2:upload <file.pdf> [folder]`: put a PDF or EPUB on the tablet, e.g. a to-do list Claude has just made. The web interface cannot replace or delete documents or create folders, so the skill asks before adding a second copy of a name that already exists.
-
-Claude also uses these on its own when you ask things like "what did I sketch in General?".
-
-### Optional: Wi-Fi
-
-Set the plugin's `ssh_host` option to an SSH host with key login to the tablet as `root` (`/plugin configure indiigo-rm2`). When the cable is not connected, every tool then reaches the same web interface over SSH instead, with the same results. A typical `~/.ssh/config` entry:
+If you already have SSH key login to the tablet as `root`, you can let the plugin reach it over Wi-Fi when the cable is not connected. Set the plugin's `ssh_host` option (`/plugin configure indiigo-rm2`) to an SSH host from your `~/.ssh/config`, for example:
 
 ```
 Host rm2
@@ -45,38 +48,21 @@ Host rm2
   User root
 ```
 
-The tablet must be awake and on the same network; a DHCP reservation keeps its address stable. The tablet starts its web interface when it wakes up or the cable is connected, not when its interface restarts, so after a restart (including after `/indiigo-rm2-ssh:delete`), press the button to wake it.
+The plugin then runs `ssh <host> wget ...` to make the same read-only requests to the tablet's web interface from the tablet itself, with the same results as over the cable. It connects only to the host you set, never prompts for a password, and changes nothing on the tablet. Leave `ssh_host` empty to use the cable only.
 
-## indiigo-rm2-ssh
-
-Actions that need SSH access, because the web interface cannot do them. They connect as `root@10.11.99.1` over the cable, or through the plugin's own `ssh_host` option over Wi-Fi. If `ssh_host` is not set, the skill asks for it and can save it.
-
-- `/indiigo-rm2-ssh:delete <document> [folder]`: permanently delete a document, including from reMarkable cloud sync. Asks for confirmation first. The tablet's interface restarts briefly to pick up the change; press the tablet's button afterwards so `indiigo-rm2` can reach it again.
-
-reMarkable software updates can change the tablet's SSH host key, and SSH then refuses to connect. Check the new key over the cable and replace the old ones:
-
-```
-ssh-keygen -R 10.11.99.1
-ssh-keygen -R <tablet's Wi-Fi IP address>
-ssh-keyscan -t ed25519 10.11.99.1 >> ~/.ssh/known_hosts
-ssh-keyscan -t ed25519 10.11.99.1 | sed 's/^10.11.99.1/<tablet Wi-Fi IP address>/' >> ~/.ssh/known_hosts
-```
+The tablet must be awake and on the same network. The tablet starts its web interface when it wakes up or the cable is connected; if it cannot be reached, press its button to wake it.
 
 ## Development
 
 ```
-claude --plugin-dir plugins/indiigo-rm2
-claude --plugin-dir plugins/indiigo-rm2-ssh
+claude --plugin-dir .
 claude plugin validate .
 ```
 
-Layout:
-
-- `.claude-plugin/marketplace.json`: the marketplace, listing both plugins
-- `plugins/<plugin>/.claude-plugin/plugin.json`: each plugin's manifest; its `name` sets the skill prefix
-- `mcpServers` in each `plugin.json`: starts the plugin's MCP server with `osascript`
-- `plugins/<plugin>/server.js`: the MCP server (JavaScript for Automation)
-- `plugins/<plugin>/skills/<name>/SKILL.md`: one directory per skill
+- `.claude-plugin/plugin.json`: the plugin manifest, including the MCP server
+- `.claude-plugin/marketplace.json`: lets the repository be added as a marketplace
+- `server.js`: the MCP server
+- `skills/<name>/SKILL.md`: the skills
 
 ## Licence
 
