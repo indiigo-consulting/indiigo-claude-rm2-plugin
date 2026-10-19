@@ -1,0 +1,15 @@
+{
+  "name": "indiigo-rm2",
+  "description": "indiigo Claude Code plugins for reMarkable 2 tablets",
+  "owner": {
+    "name": "indiigo",
+    "email": "roy@indiigo.com"
+  },
+  "plugins": [
+    {
+      "name": "rm2",
+      "source": "./",
+      "description": "Skills for interfacing with reMarkable 2 tablets"
+    }
+  ]
+}
