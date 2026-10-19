@@ -4,7 +4,7 @@ Cross-tool guidance for AI coding agents (opencode, Claude Code, etc.) working i
 
 ## What this is
 
-A single Claude plugin, `indiigo-rm2` ("indiigo reMarkable"), at the repository root, for Claude Code and Claude Cowork on macOS. Skills are `/indiigo-rm2:check`, `list` and `view`. `.claude-plugin/marketplace.json` (named `indiigo-remarkable`) lets the repo be added as a marketplace; the plugin is also intended for the Claude plugin directory.
+A single Claude plugin, `indiigo-rm2` ("indiigo reMarkable"), at the repository root, for Claude Code and Claude Cowork on macOS. Skills are `/indiigo-rm2:check`, `list`, `view` and `wifi`. `.claude-plugin/marketplace.json` (named `indiigo-remarkable`) lets the repo be added as a marketplace; the plugin is also intended for the Claude plugin directory.
 
 The plugin's MCP server `remarkable` is `server.js`, written in JavaScript for Automation and started by `mcpServers` in `.claude-plugin/plugin.json` with `/usr/bin/osascript` (not `.mcp.json`, which the centrally managed `.gitignore` excludes). Skills call its tools and handle the wording.
 
@@ -14,19 +14,19 @@ Cowork runs shell commands in a Linux VM whose proxy only allows approved host n
 
 ## Rules
 
-- Read-only. Every tool is annotated `readOnlyHint: true`; never add tools that change the tablet.
+- Never change the tablet. `check`, `list` and `view_pages` are annotated `readOnlyHint: true`; `configure_wifi` (`readOnlyHint: false`, `destructiveHint: false`) only writes the Wi-Fi host to the macOS preferences domain `com.indiigo.rm2`. Never add tools that change the tablet.
 - All functionality must work over both USB and Wi-Fi, with the same effect either way.
 - No dependencies beyond macOS: `osascript`, `curl`, `ssh` and macOS frameworks only.
 - The README must disclose everything the plugin runs, sends or stores. Update it with any change to what the server does.
 - Tool descriptions say what a tool does, never how Claude should behave; behaviour belongs in the skills.
 - Skill replies are plain language: no IDs, JSON, paths or error text. When the tablet cannot be reached, skills give USB cable steps only (see the check skill).
 - Each skill's `allowed-tools` names the MCP server (`mcp__plugin_indiigo-rm2_remarkable`), so the skills run without permission prompts.
-- Wi-Fi is opt-in through the `RM2_SSH_HOST` environment variable, which the server inherits from the user's shell in both Claude Code and Cowork. Do not use `userConfig`: a plugin whose MCP server config uses `${user_config.*}` does not load its server in Cowork (tested 2026-10-19). `plainHost` rejects anything that is not a plain host name.
+- Wi-Fi is opt-in: the host comes from `RM2_SSH_HOST` if set, else `defaults read com.indiigo.rm2 ssh_host`, saved by the `configure_wifi` tool. Do not use `userConfig` (a plugin whose MCP server config uses `${user_config.*}` does not load its server in Cowork) or rely on shell environment variables in Cowork (Claude Desktop does not start servers with the user's shell environment); both were tested on 2026-10-19. `plainHost` rejects anything that is not a plain host name.
 - Tools return MCP content: text, and PNG images for pages (rendered with PDFKit). Never write files for Claude to read: in Cowork, Claude cannot see the Mac's file system.
 
 ## Tablet web interface
 
-Reached at `http://10.11.99.1` over the USB cable. Over Wi-Fi the server makes the same requests on the tablet with `ssh $RM2_SSH_HOST wget ...`.
+Reached at `http://10.11.99.1` over the USB cable. Over Wi-Fi the server makes the same requests on the tablet with `ssh <host> wget ...`.
 
 - `GET /documents/[<ID>]`: folder listing. Uses `VisibleName`, `Type`, `ID`, `fileType`, `ModifiedClient`, `CurrentPage` (counts from 0).
 - `GET /download/<ID>/pdf`: the document as a PDF, handwriting included. Cached in `$TMPDIR/indiigo-rm2/<ID>-<ModifiedClient>.pdf`.

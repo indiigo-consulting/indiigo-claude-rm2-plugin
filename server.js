@@ -3,9 +3,10 @@
 // the Mac itself (outside Cowork's VM), where it can reach the tablet.
 //
 // The tablet's web interface is at http://10.11.99.1 over the USB cable. When
-// the cable is not connected and RM2_SSH_HOST is set, the same requests run on
-// the tablet over SSH with wget, so every tool behaves the same over USB and
-// Wi-Fi. All tools are read-only.
+// the cable is not connected and a Wi-Fi SSH host is set, the same requests
+// run on the tablet over SSH with wget, so every tool behaves the same over USB
+// and Wi-Fi. The tools never change the tablet; configure_wifi only saves the
+// Wi-Fi host in the macOS preferences domain com.indiigo.rm2.
 //
 // Speaks MCP over stdio: one JSON-RPC message per line.
 
@@ -18,7 +19,8 @@ app.includeStandardAdditions = true;
 
 const BASE = 'http://10.11.99.1';
 const env = $.NSProcessInfo.processInfo.environment;
-const sshHost = plainHost(ObjC.unwrap(env.objectForKey('RM2_SSH_HOST')) || ''); // optional, from the user's shell
+const envHost = plainHost(ObjC.unwrap(env.objectForKey('RM2_SSH_HOST')) || ''); // optional override
+const PREFS = 'com.indiigo.rm2';
 const cacheDir = (ObjC.unwrap(env.objectForKey('TMPDIR')) || '/tmp/').replace(/\/?$/, '/') + 'indiigo-rm2';
 const MAX_PAGES = 5;
 const NOT_CONNECTED =
@@ -55,24 +57,43 @@ function safePath(path) {
 
 const SSH = 'ssh -o BatchMode=yes -o ConnectTimeout=5 ';
 
+// ---------------------------------------------------------------- Wi-Fi host
+
+function savedHost() {
+  const r = tryShell('defaults read ' + PREFS + ' ssh_host');
+  return r.ok ? plainHost(r.out.trim()) : '';
+}
+
+// RM2_SSH_HOST overrides the saved setting; empty means USB only.
+function wifiHost() {
+  return envHost || savedHost();
+}
+
+function reachesTablet(host) {
+  return tryShell(SSH + quote(host) + ' ' + quote('wget -q -T 5 -O /dev/null ' + BASE + '/documents/')).ok;
+}
+
 // ---------------------------------------------------------------- transport
 
 let route = null; // 'usb' or 'wifi', remembered until a request fails
+let sshHost = ''; // the Wi-Fi host chosen by the last connect()
 
 function connect() {
   if (tryShell('curl -sf --connect-timeout 2 --max-time 5 -o /dev/null ' + BASE + '/documents/').ok) return (route = 'usb');
-  if (sshHost && tryShell(SSH + quote(sshHost) + ' ' + quote('wget -q -T 5 -O /dev/null ' + BASE + '/documents/')).ok)
-    return (route = 'wifi');
+  sshHost = wifiHost();
+  if (sshHost && reachesTablet(sshHost)) return (route = 'wifi');
   route = null;
   throw new Error(NOT_CONNECTED);
 }
 
+// usbCommand and wifiCommand are functions, so the Wi-Fi command is built only
+// after connect() has chosen the host.
 function viaRoute(usbCommand, wifiCommand) {
   if (!route) connect();
-  let r = tryShell(route === 'usb' ? usbCommand : wifiCommand);
+  let r = tryShell(route === 'usb' ? usbCommand() : wifiCommand());
   if (r.ok) return r.out;
   connect(); // the route may have changed, e.g. cable unplugged
-  r = tryShell(route === 'usb' ? usbCommand : wifiCommand);
+  r = tryShell(route === 'usb' ? usbCommand() : wifiCommand());
   if (r.ok) return r.out;
   throw new Error(NOT_CONNECTED);
 }
@@ -80,16 +101,16 @@ function viaRoute(usbCommand, wifiCommand) {
 function get(path, secs) {
   path = safePath(path);
   return viaRoute(
-    'curl -sf --connect-timeout 2 --max-time ' + secs + ' ' + BASE + '/' + path,
-    SSH + quote(sshHost) + ' ' + quote('wget -q -T ' + secs + ' -O - ' + BASE + '/' + path),
+    () => 'curl -sf --connect-timeout 2 --max-time ' + secs + ' ' + BASE + '/' + path,
+    () => SSH + quote(sshHost) + ' ' + quote('wget -q -T ' + secs + ' -O - ' + BASE + '/' + path),
   );
 }
 
 function save(path, file, secs) {
   path = safePath(path);
   viaRoute(
-    'curl -sf --connect-timeout 2 --max-time ' + secs + ' -o ' + quote(file) + ' ' + BASE + '/' + path,
-    SSH + quote(sshHost) + ' ' + quote('wget -q -T ' + secs + ' -O - ' + BASE + '/' + path) + ' > ' + quote(file),
+    () => 'curl -sf --connect-timeout 2 --max-time ' + secs + ' -o ' + quote(file) + ' ' + BASE + '/' + path,
+    () => SSH + quote(sshHost) + ' ' + quote('wget -q -T ' + secs + ' -O - ' + BASE + '/' + path) + ' > ' + quote(file),
   );
 }
 
@@ -208,19 +229,53 @@ const TOOLS = [
   {
     name: 'check',
     title: 'Check reMarkable connection',
-    description: 'Checks whether the reMarkable 2 tablet can be reached, over its USB cable or (if set up) Wi-Fi. Returns "connected: usb", "connected: wifi" or "not connected".',
+    description:
+      'Checks whether the reMarkable 2 tablet can be reached, over its USB cable or (if set up) Wi-Fi. The first line is "connected: usb", "connected: wifi" or "not connected"; the second gives the Wi-Fi host, if any.',
     inputSchema: { type: 'object', properties: {} },
+    readOnly: true,
     run() {
+      const host = wifiHost();
+      const wifi = 'Wi-Fi host: ' + (host ? host + (envHost ? ' (from RM2_SSH_HOST)' : '') : 'not set');
       try {
-        return text('connected: ' + connect());
+        return text('connected: ' + connect() + '\n' + wifi);
       } catch (e) {
-        return text('not connected');
+        return text('not connected\n' + wifi);
       }
+    },
+  },
+  {
+    name: 'configure_wifi',
+    title: 'Configure reMarkable Wi-Fi',
+    description:
+      'Saves the SSH host used to reach the reMarkable 2 over Wi-Fi when the USB cable is not connected, or removes it when ssh_host is empty or "off". The host must already have SSH key login to the tablet as root. Tests the host and reports whether it reached the tablet. Only writes the macOS preferences domain com.indiigo.rm2; never changes the tablet.',
+    inputSchema: {
+      type: 'object',
+      properties: { ssh_host: { type: 'string', description: 'SSH host name from ~/.ssh/config, or "off"' } },
+      required: ['ssh_host'],
+    },
+    readOnly: false,
+    run(args) {
+      const wanted = String(args.ssh_host || '').trim();
+      route = null;
+      if (!wanted || wanted.toLowerCase() === 'off') {
+        tryShell('defaults delete ' + PREFS + ' ssh_host');
+        return text('Wi-Fi turned off: the plugin now uses the USB cable only' + (envHost ? ' (RM2_SSH_HOST is still set and overrides this)' : ''));
+      }
+      const host = plainHost(wanted);
+      if (!host) throw new Error('"' + wanted + '" is not a valid host name: use a host from ~/.ssh/config, e.g. rm2');
+      sh('defaults write ' + PREFS + ' ssh_host ' + quote(host));
+      const note = envHost && envHost !== host ? ' (RM2_SSH_HOST is set to ' + envHost + ' and overrides this)' : '';
+      return text(
+        reachesTablet(host)
+          ? 'saved: Wi-Fi host ' + host + ', and it reached the tablet' + note
+          : 'saved: Wi-Fi host ' + host + ', but it did not reach the tablet just now. Check the tablet is awake and on the same Wi-Fi network, and that "ssh ' + host + ' true" works in Terminal without a password: that needs SSH key login to the tablet as root (password and Wi-Fi address under Settings > Help > Copyrights and licenses on the tablet; copy a key with ssh-copy-id) and a Host ' + host + ' entry in ~/.ssh/config' + note,
+      );
     },
   },
   {
     name: 'list',
     title: 'List reMarkable documents',
+    readOnly: true,
     description:
       'Lists the folders and documents on the reMarkable 2, at the top level or inside a folder found by name (case-insensitive, searched in all folders). Returns each item\'s name, kind, folder, last-changed time and, for documents, the page last open.',
     inputSchema: {
@@ -241,6 +296,7 @@ const TOOLS = [
   {
     name: 'view_pages',
     title: 'View reMarkable pages',
+    readOnly: true,
     description:
       'Returns pages of a document on the reMarkable 2 as PNG images, handwriting included. The document is found by name (case-insensitive, partial match allowed, searched in all folders). Up to ' +
       MAX_PAGES +
@@ -306,7 +362,7 @@ function handle(message) {
       result: {
         protocolVersion: (params && params.protocolVersion) || '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'indiigo reMarkable', version: '0.2.1' },
+        serverInfo: { name: 'indiigo reMarkable', version: '0.3.0' },
       },
     });
   } else if (method === 'ping') {
@@ -321,7 +377,7 @@ function handle(message) {
           title: t.title,
           description: t.description,
           inputSchema: t.inputSchema,
-          annotations: { title: t.title, readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+          annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         })),
       },
     });

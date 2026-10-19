@@ -1,8 +1,8 @@
 {
   "name": "indiigo-rm2",
   "displayName": "indiigo reMarkable",
-  "version": "0.2.1",
-  "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS. Read-only. Unofficial, not affiliated with reMarkable AS.",
+  "version": "0.3.0",
+  "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS, over USB or Wi-Fi. Never changes the tablet. Unofficial, not affiliated with reMarkable AS.",
   "author": {
     "name": "indiigo",
     "email": "roy@indiigo.com"

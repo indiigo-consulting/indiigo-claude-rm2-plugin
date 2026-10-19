@@ -4,7 +4,7 @@ description: Check whether the reMarkable 2 tablet is connected and reachable. U
 allowed-tools: mcp__plugin_indiigo-rm2_remarkable
 ---
 
-Call the `check` tool of the plugin's `remarkable` MCP server. It returns one line.
+Call the `check` tool of the plugin's `remarkable` MCP server. Its first line says whether the tablet is connected; ignore the second line (the Wi-Fi host) unless the user asks about Wi-Fi.
 
 ## Connected
 

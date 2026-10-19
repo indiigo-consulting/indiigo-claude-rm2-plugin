@@ -9,7 +9,7 @@
     {
       "name": "indiigo-rm2",
       "source": "./",
-      "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS. Read-only. Unofficial, not affiliated with reMarkable AS."
+      "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS, over USB or Wi-Fi. Never changes the tablet. Unofficial, not affiliated with reMarkable AS."
     }
   ]
 }
