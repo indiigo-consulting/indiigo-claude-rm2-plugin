@@ -7,10 +7,12 @@ allowed-tools: Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh:*)
 
 The tablet is reached over its USB cable or Wi-Fi through the plugin's `tablet.sh` script. Replies are plain language: never show IDs, JSON, commands or error text.
 
+
+Copy the `'--wifi=...'` argument exactly as it appears here, quotes included, even if it looks empty or unfilled. Never change, remove or guess its value.
 ## Fetching a folder
 
-- Top level: `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh get documents/`
-- A folder: `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh get documents/<ID>`
+- Top level: `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' get documents/`
+- A folder: `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' get documents/<ID>`
 
 Run these commands exactly as written, on their own, without adding pipes, `echo` or other commands, so they run without asking the user for permission.
 

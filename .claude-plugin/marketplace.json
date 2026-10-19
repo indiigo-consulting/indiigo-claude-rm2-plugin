@@ -8,8 +8,13 @@
   "plugins": [
     {
       "name": "rm2",
-      "source": "./",
-      "description": "Skills for interfacing with reMarkable 2 tablets"
+      "source": "./plugins/rm2",
+      "description": "List, view and upload documents on a reMarkable 2 over its USB cable, with optional Wi-Fi"
+    },
+    {
+      "name": "rm2-ssh",
+      "source": "./plugins/rm2-ssh",
+      "description": "Extra reMarkable 2 skills that need SSH access to the tablet, such as deleting documents"
     }
   ]
 }

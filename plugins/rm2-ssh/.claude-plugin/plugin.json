@@ -1,0 +1,19 @@
+{
+  "name": "rm2-ssh",
+  "version": "0.1.0",
+  "description": "Extra reMarkable 2 skills that need SSH access to the tablet, such as deleting documents",
+  "author": {
+    "name": "indiigo",
+    "email": "roy@indiigo.com"
+  },
+  "repository": "https://github.com/indiigo-consulting/indiigo-claude-rm2-plugin",
+  "userConfig": {
+    "ssh_host": {
+      "type": "string",
+      "title": "SSH host for the tablet over Wi-Fi",
+      "description": "An SSH host with key login to the tablet as root, for example rm2 from ~/.ssh/config. Over the USB cable the plugin uses root@10.11.99.1 instead.",
+      "required": false,
+      "default": ""
+    }
+  }
+}

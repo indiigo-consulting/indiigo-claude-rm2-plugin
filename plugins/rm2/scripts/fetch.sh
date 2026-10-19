@@ -3,9 +3,13 @@
 # while the document is unchanged and keeping only the latest copy. The
 # download goes over USB or Wi-Fi via tablet.sh.
 #
-# Usage: fetch.sh <ID> <ModifiedClient>
+# Usage: fetch.sh [--wifi=<host>] <ID> <ModifiedClient>
 # Prints the cached PDF's path and its page count, or "ERROR: ..." and exits 1.
 
+wifi=--wifi=
+case "$1" in
+  --wifi=*) wifi="$1"; shift ;;
+esac
 id="$1"
 modified="$2"
 
@@ -21,7 +25,7 @@ if [ ! -s "$file" ]; then
   mkdir -p "$dir"
   rm -f "$dir/$id"-*.pdf "$dir/$id".part
   # Download to a temporary name so an interrupted transfer is never reused.
-  if ! sh "$(dirname "$0")/tablet.sh" save "download/$id/pdf" "$dir/$id.part" 300; then
+  if ! sh "$(dirname "$0")/tablet.sh" "$wifi" save "download/$id/pdf" "$dir/$id.part" 300; then
     rm -f "$dir/$id.part"
     echo "ERROR: could not download from the tablet"
     exit 1

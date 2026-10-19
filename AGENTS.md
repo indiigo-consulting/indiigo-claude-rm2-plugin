@@ -4,35 +4,40 @@ Cross-tool guidance for AI coding agents (opencode, Claude Code, etc.) working i
 
 ## What this is
 
-A Claude Code plugin named `rm2` (skills are invoked as `/rm2:<name>`) that lets Claude list and look at pages on a reMarkable 2 tablet. The repo is also a single-plugin marketplace (`.claude-plugin/marketplace.json`) so it can be installed directly from GitHub.
+A Claude Code marketplace (`.claude-plugin/marketplace.json`) with two plugins for a reMarkable 2 tablet:
 
-Skill replies are plain language: they never show IDs, JSON, file paths, commands or error text, and never mention SSH or developer mode.
+- `plugins/rm2`: list, view and upload through the tablet's web interface. Skills are `/rm2:<name>`. Scripts: `tablet.sh` (all tablet access), `fetch.sh` (PDF cache in `/tmp/rm2`).
+- `plugins/rm2-ssh`: skills that need SSH, such as delete. Skills are `/rm2-ssh:<name>`. Script: `ssh.sh`.
 
-## Constraints
+Plugins are installed separately and cannot share files, so each keeps its own scripts.
 
-- No runtime dependencies beyond what ships with macOS: no Python, Node, `jq` or installs. Skills use `curl`, `ssh` and POSIX `sh` only.
-- The default connection needs no SSH, keys or developer mode. The tablet is reached through its USB web interface at `http://10.11.99.1` (Settings > Storage > USB web interface; the toggle persists across unplugging and restarts).
-- Optional Wi-Fi fallback: `ssh rm2 wget -q -O - http://10.11.99.1/...`. The `10.11.99.1` interface keeps running on the tablet with the cable unplugged, so the tablet still renders PDFs; `127.0.0.1` is refused. `BatchMode=yes` means it never prompts. When the tablet cannot be reached, skills only give steps for connecting the USB cable, never for fixing Wi-Fi.
+## Rules
 
-## Tablet web interface
+- All functionality must work over both USB and Wi-Fi, with the same effect either way.
+- Anything the web interface can do goes in `rm2`. Anything that needs SSH goes in `rm2-ssh`, so it is not listed for users without SSH access.
+- No dependencies beyond macOS: `curl`, `ssh` and POSIX `sh` only.
+- Skill replies are plain language: no IDs, JSON, paths, commands or error text.
+- When `rm2` cannot reach the tablet, its skills give USB cable steps only (see the check skill).
+- Skills only call their plugin's scripts. Each skill's `allowed-tools` covers just those scripts, so the skills run without permission prompts. Keep it that way: Claude Code prompts for `ls`/`rm` outside the working directory and for `{ ...; }` command groups, so any file handling goes inside the scripts.
+- Each plugin has an `ssh_host` `userConfig` option for Wi-Fi. Skills pass it as `'--wifi=${user_config.ssh_host}'` (`rm2`) or `'--host=${user_config.ssh_host}'` (`rm2-ssh`), in single quotes: when unset, the placeholder is left as literal text and the scripts ignore it.
 
-- `GET /documents/` and `GET /documents/<ID>`: JSON listing of a folder. Use `VisibleName` (`VissibleName` is a misspelt duplicate). `CurrentPage` counts from 0. `ModifiedClient` updates as the user draws, even while the notebook is open.
-- `GET /download/<ID>/pdf`: the whole document as a PDF, handwriting included. Claude reads pages from it with the Read tool's `pages` parameter.
-- Never call `/thumbnail/<ID>` (`tablet.sh` refuses it): in testing it hung and left the web interface unresponsive until it was switched off and on again on the tablet.
+## Tablet web interface (`rm2`)
 
-## Claude Code permission rules that shaped the design
+Reached at `http://10.11.99.1` over the USB cable. Over Wi-Fi, `tablet.sh` reaches the same address on the tablet through `ssh_host`: `ssh <host> wget ...` for reads, and an SSH tunnel (`ssh -L`) so `curl` can upload.
 
-- Skills run without prompts only if every Bash call matches the skill's `allowed-tools`. Keep `allowed-tools` narrow and tell the skill to run commands exactly as written. `prefix:*` only matches extra words after a space; use `prefix*` when an argument itself continues, such as a URL.
-- Claude Code blocks `ls`, `rm`, `grep` and similar on paths outside the session's working directory, whatever `allowed-tools` says, and always prompts for `{ ...; }` command groups. That is why all tablet access and cache handling live in `scripts/tablet.sh` and `scripts/fetch.sh`, invoked as `sh ${CLAUDE_PLUGIN_ROOT}/scripts/<name>.sh` and allowed with `Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/<name>.sh:*)`.
-- `tablet.sh` only accepts `documents/...` and `download/<ID>/pdf` paths with safe characters. This keeps `/thumbnail/` out and stops anything reaching the remote shell over SSH.
+- `GET /documents/[<ID>]`: folder listing. Use `VisibleName`, `Type`, `ID`, `ModifiedClient`, `CurrentPage` (counts from 0).
+- `GET /download/<ID>/pdf`: the document as a PDF, handwriting included.
+- `POST /upload`: multipart `file` field, into the folder last listed. Always adds a new document.
+- There is no delete, rename or create-folder endpoint.
+- Never call `/thumbnail/`: it can hang the interface. `tablet.sh` only allows the paths above.
 
-## Cache
+## SSH (`rm2-ssh`)
 
-`fetch.sh` stores `/tmp/rm2/<ID>-<ModifiedClient>.pdf`, reuses it while `ModifiedClient` is unchanged, deletes older copies of the same document, and downloads to `<ID>.part` first so an interrupted transfer is never reused.
+`ssh.sh` connects as `root@10.11.99.1` over the cable, else through `ssh_host`. Documents are files in `/home/root/.local/share/remarkable/xochitl/<ID>.*`. Changing them needs `systemctl stop xochitl` / `start xochitl` around the edit, which briefly returns the tablet to its home screen. A deletion must leave `<ID>.tombstone` (containing the date) or cloud sync restores the document.
 
 ## Development
 
-- Load locally: `claude --plugin-dir .`
-- Validate: `claude plugin validate .` (the warning about `CLAUDE.md` not being loaded for plugin users is expected).
-- Smoke-test a skill: `claude --plugin-dir . -p "/rm2:view <notebook> last" < /dev/null`. Add `--output-format stream-json --verbose` and inspect `permission_denials` in the final `result` event to confirm a skill runs without prompts.
-- Bump `version` in `.claude-plugin/plugin.json` for every release; installed copies only update when it changes.
+- Load locally: `claude --plugin-dir plugins/rm2` (or `plugins/rm2-ssh`)
+- Validate: `claude plugin validate .` and `claude plugin validate plugins/<plugin>`
+- Test a skill: `claude --plugin-dir plugins/rm2 -p "/rm2:view <notebook> last" < /dev/null`. Add `--output-format stream-json --verbose` and check `permission_denials` in the final `result` event is empty.
+- Bump `version` in the plugin's `plugin.json` for every release.

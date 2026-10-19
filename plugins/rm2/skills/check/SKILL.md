@@ -7,11 +7,13 @@ allowed-tools: Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh:*)
 Run exactly this, on its own:
 
 ```
-sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh check
+sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' check
 ```
 
 It tries the USB cable first and then, for users who have set it up, Wi-Fi. It prints one line.
 
+
+Copy the `'--wifi=...'` argument exactly as it appears here, quotes included, even if it looks empty or unfilled. Never change, remove or guess its value.
 ## Connected
 
 - `connected: usb`: reply in one line: "Your reMarkable is connected."

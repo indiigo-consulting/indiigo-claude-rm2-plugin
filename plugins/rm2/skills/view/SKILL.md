@@ -7,22 +7,24 @@ allowed-tools: Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh:*), Bash(sh ${CLA
 
 The tablet is reached over its USB cable or Wi-Fi through the plugin's scripts. The tablet can export any document, handwriting included, as a PDF. Claude downloads that PDF and reads the pages it needs with the Read tool. Replies are plain language: never show IDs, JSON, file paths, commands or error text.
 
+
+Copy the `'--wifi=...'` argument exactly as it appears here, quotes included, even if it looks empty or unfilled. Never change, remove or guess its value.
 ## 1. Find the document
 
 `$ARGUMENTS` holds the document name and, optionally, the pages wanted. If no name is given, ask which notebook they want (the rm2:list skill can show them).
 
-List the top level with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh get documents/`. Each JSON entry has `VisibleName` (ignore the misspelt `VissibleName`), `Type` (`CollectionType` is a folder, `DocumentType` a document), `ID`, `ModifiedClient` and, for documents, `CurrentPage`.
+List the top level with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' get documents/`. Each JSON entry has `VisibleName` (ignore the misspelt `VissibleName`), `Type` (`CollectionType` is a folder, `DocumentType` a document), `ID`, `ModifiedClient` and, for documents, `CurrentPage`.
 
 Run these commands exactly as written, on their own, without adding pipes, `echo` or other commands, so they run without asking the user for permission.
 
-Match the name case-insensitively; a partial match is fine if only one document matches. If it is not at the top level, look inside folders with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh get documents/<folder ID>`, going deeper until found. If several documents match, ask which one. If none match, say so and offer to list what is on the tablet.
+Match the name case-insensitively; a partial match is fine if only one document matches. If it is not at the top level, look inside folders with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh '--wifi=${user_config.ssh_host}' get documents/<folder ID>`, going deeper until found. If several documents match, ask which one. If none match, say so and offer to list what is on the tablet.
 
 ## 2. Get the PDF
 
 Before fetching, tell the user in one short line that you are getting the notebook from their reMarkable (large notebooks take a little while). Then run exactly this, with the document's `ID` and `ModifiedClient` from the listing:
 
 ```
-sh ${CLAUDE_PLUGIN_ROOT}/scripts/fetch.sh <ID> <ModifiedClient>
+sh ${CLAUDE_PLUGIN_ROOT}/scripts/fetch.sh '--wifi=${user_config.ssh_host}' <ID> <ModifiedClient>
 ```
 
 The script keeps a copy in `/tmp/rm2`, reuses it while the document is unchanged on the tablet, and deletes older copies. Do not run `ls`, `rm`, `grep`, `curl` or `ssh` yourself. It prints:
