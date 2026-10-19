@@ -306,7 +306,7 @@ function handle(message) {
       result: {
         protocolVersion: (params && params.protocolVersion) || '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'indiigo reMarkable', version: '0.2.0' },
+        serverInfo: { name: 'indiigo reMarkable', version: '0.2.1' },
       },
     });
   } else if (method === 'ping') {
