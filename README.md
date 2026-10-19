@@ -17,8 +17,6 @@ Install only `rm2` unless you have SSH access to the tablet; the `rm2-ssh` skill
 /plugin install rm2-ssh@indiigo-rm2
 ```
 
-While the repo is private, this needs GitHub access through your local git credentials (SSH key or `gh auth login`).
-
 ## rm2
 
 Requirements:
@@ -71,3 +69,7 @@ Layout:
 - `plugins/rm2/scripts/tablet.sh`: web interface access, over USB first and then Wi-Fi via SSH
 - `plugins/rm2/scripts/fetch.sh`: downloads a document's PDF into the `/tmp/rm2` cache
 - `plugins/rm2-ssh/scripts/ssh.sh`: SSH access for the `rm2-ssh` skills
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
