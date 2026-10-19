@@ -1,6 +1,13 @@
 # indiigo-claude-rm2-plugin
 Claude plugin with skills for interfacing with reMarkable 2 tablets
 
+## Requirements
+
+- A reMarkable 2 connected to the computer with its USB cable.
+- On the tablet: Settings > Storage > turn on "USB web interface".
+
+Nothing else is needed: no SSH keys, no developer mode and no extra software. The plugin talks to the tablet's built-in web interface at `http://10.11.99.1` using `curl`.
+
 ## Install
 
 In Claude Code:
