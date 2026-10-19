@@ -1,22 +1,38 @@
 ---
 name: check
-description: Check whether the reMarkable 2 tablet is connected and reachable over its USB cable. Use when the user runs /rm2:check, asks to test the connection to their reMarkable, or before any other rm2 action fails to reach the tablet.
-allowed-tools: Bash(curl:*)
+description: Check whether the reMarkable 2 tablet is connected and reachable. Use when the user runs /rm2:check, asks to test the connection to their reMarkable, or when any other rm2 action cannot reach the tablet.
+allowed-tools: Bash(sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh:*)
 ---
 
-The tablet is reached through its USB web interface at `http://10.11.99.1`. Do not use SSH and do not mention SSH, developer mode or passwords to the user.
-
-Run:
+Run exactly this, on its own:
 
 ```
-curl -s --max-time 3 http://10.11.99.1/documents/
+sh ${CLAUDE_PLUGIN_ROOT}/scripts/tablet.sh check
 ```
 
-**If it returns a JSON array**, the tablet is connected. Reply in one line: "Your reMarkable is connected (N items in the top folder)." where N is the number of entries in the array.
+It tries the USB cable first and then, for users who have set it up, Wi-Fi. It prints one line.
 
-**If it fails, times out or returns anything else**, reply that the reMarkable could not be reached, then give these steps in plain language:
+## Connected
 
-1. Connect the reMarkable to this computer with its USB cable.
-2. Wake the tablet and unlock it.
-3. On the tablet, open Settings, then Storage, and turn on "USB web interface".
-4. Run /rm2:check again.
+- `connected: usb`: reply in one line: "Your reMarkable is connected."
+- `connected: wifi`: reply in one line: "Your reMarkable is connected over Wi-Fi."
+
+Do not list files or show any technical detail.
+
+## Not connected
+
+If it prints `not connected` or anything else, reply in plain language. Only ever help them connect with the USB cable: never mention Wi-Fi or suggest fixing a Wi-Fi connection. Keep the reply short, friendly and free of jargon. Never mention SSH, IP addresses, curl, commands, errors or developer mode. Reply with:
+
+> I can't see your reMarkable at the moment. Please try these steps:
+>
+> 1. Plug the reMarkable into this computer with its USB cable.
+> 2. Press the button on the top of the reMarkable to wake it up, and unlock it if it asks.
+> 3. If it still doesn't work: on the reMarkable, tap the menu, then **Settings**, then **Storage**, and switch on **USB web interface**. You only need to do this once.
+>
+> Then ask me to check again.
+
+If the user has already tried these steps and it still fails, suggest, one at a time:
+
+1. On the reMarkable, switch **USB web interface** off and then on again (menu, **Settings**, **Storage**).
+2. Unplug the cable and plug it back in, or try a different USB port on the computer.
+3. Restart the reMarkable: hold the button on the top, choose to restart, then unlock it once it has started up.
