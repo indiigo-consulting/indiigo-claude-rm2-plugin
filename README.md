@@ -68,6 +68,10 @@ claude plugin validate .
 - `server.js`: the MCP server
 - `skills/<name>/SKILL.md`: the skills
 
+## Privacy
+
+The plugin collects nothing and sends nothing to indiigo. See the [privacy policy](PRIVACY.md).
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).

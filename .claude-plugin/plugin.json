@@ -9,6 +9,7 @@
   },
   "repository": "https://github.com/indiigo-consulting/indiigo-claude-rm2-plugin",
   "license": "MIT",
+  "privacyPolicyUrl": "https://github.com/indiigo-consulting/indiigo-claude-rm2-plugin/blob/main/PRIVACY.md",
   "mcpServers": {
     "remarkable": {
       "command": "/usr/bin/osascript",
