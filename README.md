@@ -18,7 +18,7 @@ On older Claude Code versions, add the marketplace first, then install:
 
 While the repo is private, this needs GitHub access through your local git credentials (SSH key or `gh auth login`).
 
-All skills are namespaced under `rm2`, for example `/rm2:hello-world`.
+All skills are namespaced under `rm2`, for example `/rm2:check`.
 
 ## Local development
 
