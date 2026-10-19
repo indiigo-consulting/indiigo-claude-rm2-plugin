@@ -1,0 +1,72 @@
+# this file is managed by automaton
+
+# nodejs
+node_modules
+.env
+.envrc
+coverage
+coverage.json
+typechain
+
+# hardhat
+cache
+artifacts
+
+# macbooks
+.DS_Store
+
+# terraform
+_archive
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfvars
+
+# 11ty
+_dist
+_site
+
+# serverless
+.serverless
+
+# hugo
+public
+resources
+.hugo_build.lock
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.dist-info/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytype/
+*.log
+
+# claude
+settings.local.json
+.mcp.json
+
+# next.js
+.next/
+out/
+.env.local
+.env*.local
+
+# google-drive sharing
+google-drive
+
+# ralph-bmad
+ralph-bmad-log-*.md
