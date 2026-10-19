@@ -18,7 +18,7 @@ app.includeStandardAdditions = true;
 
 const BASE = 'http://10.11.99.1';
 const env = $.NSProcessInfo.processInfo.environment;
-const sshHost = plainHost(ObjC.unwrap(env.objectForKey('RM2_SSH_HOST')) || '');
+const sshHost = plainHost(ObjC.unwrap(env.objectForKey('RM2_SSH_HOST')) || ''); // optional, from the user's shell
 const cacheDir = (ObjC.unwrap(env.objectForKey('TMPDIR')) || '/tmp/').replace(/\/?$/, '/') + 'indiigo-rm2';
 const MAX_PAGES = 5;
 const NOT_CONNECTED =

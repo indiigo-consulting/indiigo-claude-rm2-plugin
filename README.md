@@ -40,7 +40,7 @@ The plugin includes one MCP server, `server.js`, written in JavaScript for Autom
 
 ## Optional: Wi-Fi
 
-If you already have SSH key login to the tablet as `root`, you can let the plugin reach it over Wi-Fi when the cable is not connected. Set the plugin's `ssh_host` option (`/plugin configure indiigo-rm2`) to an SSH host from your `~/.ssh/config`, for example:
+If you already have SSH key login to the tablet as `root`, you can let the plugin reach it over Wi-Fi when the cable is not connected. Add an SSH host for the tablet to your `~/.ssh/config`, for example:
 
 ```
 Host rm2
@@ -48,7 +48,13 @@ Host rm2
   User root
 ```
 
-The plugin then runs `ssh <host> wget ...` to make the same read-only requests to the tablet's web interface from the tablet itself, with the same results as over the cable. It connects only to the host you set, never prompts for a password, and changes nothing on the tablet. Leave `ssh_host` empty to use the cable only.
+Then set the `RM2_SSH_HOST` environment variable to that host in your shell profile (for example `~/.zshrc`), and restart Claude:
+
+```
+export RM2_SSH_HOST=rm2
+```
+
+The plugin then runs `ssh <host> wget ...` to make the same read-only requests to the tablet's web interface from the tablet itself, with the same results as over the cable. It connects only to the host in `RM2_SSH_HOST`, never prompts for a password, and changes nothing on the tablet. Without `RM2_SSH_HOST`, the plugin uses the cable only.
 
 The tablet must be awake and on the same network. The tablet starts its web interface when it wakes up or the cable is connected; if it cannot be reached, press its button to wake it.
 

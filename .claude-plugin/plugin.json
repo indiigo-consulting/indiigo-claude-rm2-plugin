@@ -1,7 +1,7 @@
 {
   "name": "indiigo-rm2",
   "displayName": "indiigo reMarkable",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "indiigo reMarkable: check the connection, list documents and view pages of a reMarkable 2 from Claude on macOS. Read-only. Unofficial, not affiliated with reMarkable AS.",
   "author": {
     "name": "indiigo",
@@ -9,15 +9,6 @@
   },
   "repository": "https://github.com/indiigo-consulting/indiigo-claude-rm2-plugin",
   "license": "MIT",
-  "userConfig": {
-    "ssh_host": {
-      "type": "string",
-      "title": "SSH host for Wi-Fi (optional)",
-      "description": "Leave empty to connect over the USB cable only. Set to an SSH host with key login to the tablet as root (for example rm2 from ~/.ssh/config) to fall back to Wi-Fi when the cable is not connected.",
-      "required": false,
-      "default": ""
-    }
-  },
   "mcpServers": {
     "remarkable": {
       "command": "/usr/bin/osascript",
@@ -25,10 +16,7 @@
         "-l",
         "JavaScript",
         "${CLAUDE_PLUGIN_ROOT}/server.js"
-      ],
-      "env": {
-        "RM2_SSH_HOST": "${user_config.ssh_host}"
-      }
+      ]
     }
   },
   "keywords": [

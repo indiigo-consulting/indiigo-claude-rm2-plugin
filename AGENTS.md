@@ -21,12 +21,12 @@ Cowork runs shell commands in a Linux VM whose proxy only allows approved host n
 - Tool descriptions say what a tool does, never how Claude should behave; behaviour belongs in the skills.
 - Skill replies are plain language: no IDs, JSON, paths or error text. When the tablet cannot be reached, skills give USB cable steps only (see the check skill).
 - Each skill's `allowed-tools` names the MCP server (`mcp__plugin_indiigo-rm2_remarkable`), so the skills run without permission prompts.
-- The optional `ssh_host` `userConfig` value reaches the server as `RM2_SSH_HOST`. When unset, the literal placeholder arrives; `plainHost` ignores it.
+- Wi-Fi is opt-in through the `RM2_SSH_HOST` environment variable, which the server inherits from the user's shell in both Claude Code and Cowork. Do not use `userConfig`: a plugin whose MCP server config uses `${user_config.*}` does not load its server in Cowork (tested 2026-10-19). `plainHost` rejects anything that is not a plain host name.
 - Tools return MCP content: text, and PNG images for pages (rendered with PDFKit). Never write files for Claude to read: in Cowork, Claude cannot see the Mac's file system.
 
 ## Tablet web interface
 
-Reached at `http://10.11.99.1` over the USB cable. Over Wi-Fi the server makes the same requests on the tablet with `ssh <ssh_host> wget ...`.
+Reached at `http://10.11.99.1` over the USB cable. Over Wi-Fi the server makes the same requests on the tablet with `ssh $RM2_SSH_HOST wget ...`.
 
 - `GET /documents/[<ID>]`: folder listing. Uses `VisibleName`, `Type`, `ID`, `fileType`, `ModifiedClient`, `CurrentPage` (counts from 0).
 - `GET /download/<ID>/pdf`: the document as a PDF, handwriting included. Cached in `$TMPDIR/indiigo-rm2/<ID>-<ModifiedClient>.pdf`.
